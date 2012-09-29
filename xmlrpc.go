@@ -269,7 +269,7 @@ func Call(url, name string, args ...interface{}) (v interface{}, e error) {
 	s += "<params>"
 	for _, arg := range args {
 		s += "<param><value>"
-		s += to_xml(arg, false)
+		s += to_xml(arg, true) // Warning changed typed arguments to TRUE !
 		s += "</value></param>"
 	}
 	s += "</params></methodCall>"
