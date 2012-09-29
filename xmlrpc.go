@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var structLevel int
+
 type Array []interface{}
 type Struct map[string]interface{}
 
@@ -104,6 +106,9 @@ func next(p *xml.Decoder) (xml.Name, interface{}, error) {
 		nextStart(p)
 		return next(p)
 	case "struct":
+		structLevel++             // Entering new struct level. Increase global level.
+		localLevel := structLevel // And set local to current.
+
 		st := Struct{}
 
 		se, e = nextStart(p)
@@ -133,12 +138,15 @@ func next(p *xml.Decoder) (xml.Name, interface{}, error) {
 			if e != nil {
 				break
 			}
+			st[name] = value
+
+			if localLevel > structLevel { // We came up from higher level. We're already on a Start.
+				break
+			}
 			se, e = nextStart(p)
 			if e != nil {
 				break
 			}
-
-			st[name] = value
 		}
 		return xml.Name{}, st, nil
 	case "array":
@@ -169,6 +177,10 @@ func nextStart(p *xml.Decoder) (xml.StartElement, error) {
 		switch t := t.(type) {
 		case xml.StartElement:
 			return t, nil
+		case xml.EndElement:
+			if t.Name.Local == "struct" { // Found struct end. Decrease struct level.
+				structLevel--
+			}
 		}
 	}
 	panic("unreachable")
