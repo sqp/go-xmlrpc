@@ -37,8 +37,8 @@ func xmlEscape(s string) string {
 }
 
 type valueNode struct {
-	Type string `xml:"attr"`
-	Body string `xml:"chardata"`
+	Type string `xml:",attr"`
+	Body string `xml:",chardata"`
 }
 
 func next(p *xml.Decoder) (xml.Name, interface{}, error) {
@@ -50,6 +50,12 @@ func next(p *xml.Decoder) (xml.Name, interface{}, error) {
 	var nv interface{}
 	var vn valueNode
 	switch se.Name.Local {
+	case "boolean":
+		if e = p.DecodeElement(&vn, &se); e != nil {
+			return xml.Name{}, nil, e
+		}
+		b, e := strconv.ParseBool(vn.Body)
+		return xml.Name{}, b, e
 	case "string":
 		if e = p.DecodeElement(&vn, &se); e != nil {
 			return xml.Name{}, nil, e
@@ -199,7 +205,7 @@ func to_xml(v interface{}, typ bool) (s string) {
 		return fmt.Sprintf("%v", v)
 	case reflect.Complex64, reflect.Complex128:
 		panic("unsupported type")
-	case reflect.Array:
+	case reflect.Array, reflect.Slice:
 		s = "<array><data>"
 		for n := 0; n < r.Len(); n++ {
 			s += "<value>"
@@ -222,10 +228,8 @@ func to_xml(v interface{}, typ bool) (s string) {
 			s += "<value>" + to_xml(r.MapIndex(key).Interface(), typ) + "</value>"
 			s += "</member>"
 		}
-		return s
+		return s + "</struct>"
 	case reflect.Ptr:
-		panic("unsupported type")
-	case reflect.Slice:
 		panic("unsupported type")
 	case reflect.String:
 		if typ {
@@ -240,7 +244,7 @@ func to_xml(v interface{}, typ bool) (s string) {
 			s += "<value>" + to_xml(r.FieldByIndex([]int{n}).Interface(), true) + "</value>"
 			s += "</member>"
 		}
-		return s
+		return s + "</struct>"
 	case reflect.UnsafePointer:
 		return to_xml(r.Elem(), typ)
 	}
